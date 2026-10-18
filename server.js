@@ -22,7 +22,7 @@ function loadKeys() {
         "AMHK-DEMO-KEY": {
             key: "AMHK-DEMO-KEY",
             createdAt: new Date().toISOString(),
-            expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(), // 1 Hour default
+            expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(),
             status: "active"
         }
     };
@@ -46,15 +46,13 @@ const checkAdminAuth = (req, res, next) => {
     next();
 };
 
-// --- ADMIN API ENDPOINTS ---
-
+// ADMIN API ENDPOINTS
 app.post('/api/admin/login', (req, res) => {
     if (req.body.password === ADMIN_SECRET) return res.json({ success: true });
     res.status(401).json({ success: false, message: "Invalid Admin Password." });
 });
 
 app.post('/api/admin/create-key', checkAdminAuth, (req, res) => {
-    // Defaults to 0 days, 1 hour, 0 minutes
     const { key, days = 0, hours = 1, minutes = 0 } = req.body;
     if (!key) return res.status(400).json({ success: false, message: "Key required." });
 
@@ -88,8 +86,7 @@ app.post('/api/admin/delete-key', checkAdminAuth, (req, res) => {
     res.status(404).json({ success: false, message: "Key not found." });
 });
 
-// --- CLIENT API ENDPOINTS ---
-
+// CLIENT API ENDPOINTS
 app.post('/api/verify', (req, res) => {
     const { key } = req.body;
     const license = activeLicenses[key];
@@ -107,7 +104,7 @@ app.post('/api/verify', (req, res) => {
     res.json({ success: true, expiresAt: license.expiresAt });
 });
 
-// DYNAMIC CONFIG API (SUBSCRIPTION ENDPOINT)
+// DYNAMIC CONFIG SUBSCRIPTION API
 app.get('/api/get-config', (req, res) => {
     const { key } = req.query;
     const license = activeLicenses[key];
@@ -122,9 +119,8 @@ app.get('/api/get-config', (req, res) => {
     }
 
     const expireUnix = Math.floor(new Date(license.expiresAt).getTime() / 1000);
-    const totalBytesQuota = 74109405568; // 69.0 GB Display
+    const totalBytesQuota = 74109405568; // 69.0 GB
 
-    // Clean JSON configuration without crash-inducing log paths
     const jsonConfig = {
       "remarks": `Aimhack-${key.slice(-4)}`,
       "inbounds": [
@@ -192,6 +188,6 @@ app.get('/api/get-config', (req, res) => {
     res.send(subscriptionPayload);
 });
 
-// START SERVER (BOUND TO 0.0.0.0 FOR RENDER PUBLIC ROUTING)
+// LISTEN ON 0.0.0.0 FOR RENDER PUBLIC ROUTING
 const PORT = process.env.PORT || 10000;
 app.listen(PORT, '0.0.0.0', () => console.log(`Server running on 0.0.0.0:${PORT}`));
