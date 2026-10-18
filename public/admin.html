@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-950 text-white min-h-screen p-6">
+    <div class="max-w-2xl mx-auto bg-gray-900 border border-gray-800 p-6 rounded-2xl shadow-xl">
+        <h1 class="text-2xl font-bold mb-6 text-red-500">ADMIN CONTROL PANEL</h1>
+
+        <!-- Admin Login -->
+        <div id="admin-login-box">
+            <label class="block text-sm text-gray-400 mb-2">Admin Password</label>
+            <input type="password" id="admin-pass" placeholder="Enter Admin Password" class="w-full bg-gray-800 border border-gray-700 rounded-lg px-4 py-3 mb-4 text-white focus:outline-none focus:border-red-500">
+            <button onclick="adminLogin()" class="w-full bg-red-600 hover:bg-red-700 py-3 rounded-lg font-semibold">Login</button>
+            <p id="admin-err" class="text-red-400 text-sm mt-2"></p>
+        </div>
+
+        <!-- Admin Controls -->
+        <div id="admin-content" class="hidden">
+            <div class="bg-gray-800 p-4 rounded-xl mb-6">
+                <h2 class="text-lg font-semibold mb-3 text-gray-200">Generate New Key</h2>
+                <input type="text" id="new-key-name" placeholder="Key Name (e.g. AMHK-USER-1)" class="w-full bg-gray-900 border border-gray-700 rounded-lg px-4 py-2 mb-3 text-white">
+                <div class="grid grid-cols-3 gap-2 mb-3">
+                    <input type="number" id="key-days" placeholder="Days" value="0" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white">
+                    <input type="number" id="key-hours" placeholder="Hours" value="1" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white">
+                    <input type="number" id="key-mins" placeholder="Mins" value="0" class="bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-white">
+                </div>
+                <button onclick="createKey()" class="w-full bg-green-600 hover:bg-green-700 py-2 rounded-lg font-semibold">Create Key</button>
+            </div>
+
+            <h2 class="text-lg font-semibold mb-3 text-gray-200">Active Keys</h2>
+            <div id="keys-list" class="space-y-2"></div>
+        </div>
+    </div>
+
+    <script>
+        let adminSecret = "";
+
+        async function adminLogin() {
+            const pass = document.getElementById('admin-pass').value.trim();
+            const res = await fetch('/api/admin/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password: pass })
+            });
+            const data = await res.json();
+            if (data.success) {
+                adminSecret = pass;
+                document.getElementById('admin-login-box').classList.add('hidden');
+                document.getElementById('admin-content').classList.remove('hidden');
+                loadKeys();
+            } else {
+                document.getElementById('admin-err').innerText = data.message;
+            }
+        }
+
+        async function createKey() {
+            const key = document.getElementById('new-key-name').value.trim();
+            const days = document.getElementById('key-days').value;
+            const hours = document.getElementById('key-hours').value;
+            const minutes = document.getElementById('key-mins').value;
+
+            const res = await fetch('/api/admin/create-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-auth': adminSecret },
+                body: JSON.stringify({ key, days, hours, minutes })
+            });
+            const data = await res.json();
+            alert(data.message);
+            if (data.success) loadKeys();
+        }
+
+        async function loadKeys() {
+            const res = await fetch('/api/admin/keys', {
+                headers: { 'x-admin-auth': adminSecret }
+            });
+            const data = await res.json();
+            const container = document.getElementById('keys-list');
+            container.innerHTML = "";
+            if (data.success) {
+                data.keys.forEach(k => {
+                    container.innerHTML += `
+                        <div class="bg-gray-800 p-3 rounded-lg flex justify-between items-center text-sm">
+                            <div>
+                                <p class="font-mono text-red-400 font-bold">${k.key}</p>
+                                <p class="text-xs text-gray-400">Expires: ${new Date(k.expiresAt).toLocaleString()}</p>
+                            </div>
+                            <button onclick="deleteKey('${k.key}')" class="bg-red-600/80 hover:bg-red-600 px-3 py-1 rounded text-xs">Delete</button>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        async function deleteKey(key) {
+            await fetch('/api/admin/delete-key', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'x-admin-auth': adminSecret },
+                body: JSON.stringify({ key })
+            });
+            loadKeys();
+        }
+    </script>
+</body>
+</html>
